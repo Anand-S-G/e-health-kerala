@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { message } = await request.json();
