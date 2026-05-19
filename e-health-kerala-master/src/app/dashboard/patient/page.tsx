@@ -33,7 +33,7 @@ export default async function PatientDashboard() {
   });
 
   // Fetch patient medical records
-  const records = await prisma.medicalRecord.findMany({
+  const records = await (prisma as any).medicalRecord.findMany({
     where: { patientId: session.user.id },
     include: { doctor: true },
     orderBy: { date: 'desc' },
@@ -93,7 +93,7 @@ export default async function PatientDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {records.map(record => (
+                {records.map((record: any) => (
                   <div key={record.id} className="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
                       <div>

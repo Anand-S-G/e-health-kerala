@@ -16,7 +16,7 @@ export default async function BookAppointmentPage({ params }: { params: Promise<
 
   if (!doctor) return <div>Doctor not found.</div>;
 
-  const slots = await prisma.availabilitySlot.findMany({
+  const slots = await (prisma as any).availabilitySlot.findMany({
     where: {
       doctorId: doctor.userId,
       isBooked: false,
