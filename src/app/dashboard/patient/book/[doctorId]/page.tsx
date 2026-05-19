@@ -3,16 +3,27 @@ import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import BookingForm from './BookingForm';
 
-export default async function BookAppointmentPage({ params }: { params: { doctorId: string } }) {
+export default async function BookAppointmentPage({ params }: { params: Promise<{ doctorId: string }> }) {
   const session = await getSession();
   if (session?.user.role !== 'PATIENT') redirect('/auth');
 
+  const { doctorId } = await params;
+
   const doctor = await prisma.doctor.findUnique({
-    where: { id: params.doctorId },
+    where: { id: doctorId },
     include: { user: true, hospital: true },
   });
 
   if (!doctor) return <div>Doctor not found.</div>;
+
+  const slots = await (prisma as any).availabilitySlot.findMany({
+    where: {
+      doctorId: doctor.userId,
+      isBooked: false,
+      datetime: { gte: new Date() }
+    },
+    orderBy: { datetime: 'asc' }
+  });
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -23,7 +34,7 @@ export default async function BookAppointmentPage({ params }: { params: { doctor
         <p className="text-slate-500">{doctor.hospital?.name || 'Independent Practice'}</p>
       </div>
 
-      <BookingForm doctorId={doctor.id} />
+      <BookingForm doctorId={doctor.userId} slots={slots as any} />
     </div>
   );
 }

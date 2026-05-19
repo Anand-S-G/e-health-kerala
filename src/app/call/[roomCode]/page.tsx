@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function VideoCallPage({ params }: { params: { roomCode: string } }) {
+export default function VideoCallPage({ params }: { params: Promise<{ roomCode: string }> }) {
+  const { roomCode } = use(params);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
@@ -40,7 +41,7 @@ export default function VideoCallPage({ params }: { params: { roomCode: string }
             await fetch('/api/webrtc', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ roomCode: params.roomCode, type: 'candidate', payload: event.candidate }),
+              body: JSON.stringify({ roomCode, type: 'candidate', payload: event.candidate }),
             });
           }
         };
@@ -50,11 +51,11 @@ export default function VideoCallPage({ params }: { params: { roomCode: string }
         await fetch('/api/webrtc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roomCode: params.roomCode, type: 'offer', payload: offer }),
+          body: JSON.stringify({ roomCode, type: 'offer', payload: offer }),
         });
 
         pollInterval = setInterval(async () => {
-          const res = await fetch(`/api/webrtc?roomCode=${params.roomCode}`);
+          const res = await fetch(`/api/webrtc?roomCode=${roomCode}`);
           if (res.ok) {
             const data = await res.json();
             for (const signal of data.signals) {
@@ -67,7 +68,7 @@ export default function VideoCallPage({ params }: { params: { roomCode: string }
                 await fetch('/api/webrtc', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ roomCode: params.roomCode, type: 'answer', payload: answer }),
+                  body: JSON.stringify({ roomCode, type: 'answer', payload: answer }),
                 });
               } else if (signal.type === 'answer') {
                 if (pc.signalingState === 'have-local-offer') {
@@ -98,7 +99,7 @@ export default function VideoCallPage({ params }: { params: { roomCode: string }
         peerConnection.current.close();
       }
     };
-  }, [params.roomCode]);
+  }, [roomCode]);
 
   const toggleMic = () => {
     if (localVideoRef.current && localVideoRef.current.srcObject) {
