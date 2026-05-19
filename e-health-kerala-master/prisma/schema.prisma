@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      String   @default("PATIENT") // PATIENT, DOCTOR, HOSPITAL
+  createdAt DateTime @default(now())
+
+  // Relations based on role
+  doctorProfile   Doctor?
+  hospitalProfile Hospital?
+
+  patientAppointments Appointment[] @relation("PatientAppointments")
+  doctorAppointments  Appointment[] @relation("DoctorAppointments")
+  availabilitySlots   AvailabilitySlot[] @relation("DoctorAvailability")
+
+  patientRecords      MedicalRecord[] @relation("PatientRecords")
+  doctorRecords       MedicalRecord[] @relation("DoctorRecords")
+}
+
+model Hospital {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  address   String?
+  phone     String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctors   Doctor[]
+}
+
+model Doctor {
+  id             String   @id @default(uuid())
+  specialization String
+  isPaused       Boolean  @default(false)
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospitalId     String?
+  hospital       Hospital? @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+}
+
+model Appointment {
+  id         String   @id @default(uuid())
+  patientId  String
+  doctorId   String
+  datetime   DateTime
+  status     String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  roomCode   String?  @unique // For WebRTC
+  
+  patient    User     @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctor     User     @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+}
+
+model WebRTCSignal {
+  id          String   @id @default(uuid())
+  roomCode    String
+  senderId    String
+  receiverId  String
+  type        String   // "offer", "answer", "candidate"
+  payload     String   // JSON string of SDP or ICE candidate
+  createdAt   DateTime @default(now())
+}
+
+model MedicalRecord {
+  id           String   @id @default(uuid())
+  patientId    String
+  doctorId     String
+  diagnosis    String
+  prescription String
+  notes        String?
+  date         DateTime @default(now())
+
+  patient      User     @relation("PatientRecords", fields: [patientId], references: [id], onDelete: Cascade)
+  doctor       User     @relation("DoctorRecords", fields: [doctorId], references: [id], onDelete: Cascade)
+}
+
+model AvailabilitySlot {
+  id          String   @id @default(uuid())
+  doctorId    String   // User ID of the doctor
+  datetime    DateTime
+  isBooked    Boolean  @default(false)
+  
+  doctor      User     @relation("DoctorAvailability", fields: [doctorId], references: [id], onDelete: Cascade)
+}
