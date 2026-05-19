@@ -22,8 +22,9 @@ export async function decrypt(input: string): Promise<any> {
 export async function createSession(user: { id: string; email: string; role: string }) {
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day
   const session = await encrypt({ user, expires });
+  const cookieStore = await cookies();
 
-  cookies().set('session', session, {
+  cookieStore.set('session', session, {
     expires,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -33,7 +34,8 @@ export async function createSession(user: { id: string; email: string; role: str
 }
 
 export async function getSession() {
-  const session = cookies().get('session')?.value;
+  const cookieStore = await cookies();
+  const session = cookieStore.get('session')?.value;
   if (!session) return null;
   try {
     return await decrypt(session);
@@ -43,5 +45,6 @@ export async function getSession() {
 }
 
 export async function clearSession() {
-  cookies().set('session', '', { expires: new Date(0) });
+  const cookieStore = await cookies();
+  cookieStore.set('session', '', { expires: new Date(0) });
 }
