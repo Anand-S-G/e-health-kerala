@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       },
       include: {
         patient: true,
-        doctor: { include: { user: true } }
+        doctor: true
       }
     });
 
@@ -31,10 +31,10 @@ export async function GET(request: Request) {
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: apt.patient.email,
         subject: 'Appointment Reminder - E-Health Kerala',
-        text: `You have an upcoming telemedicine appointment with Dr. ${apt.doctor.user.name} at ${time}.`,
+        text: `You have an upcoming telemedicine appointment with Dr. ${apt.doctor.name} at ${time}.`,
         html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
                 <h2 style="color: #0ea5e9;">Appointment Reminder</h2>
-                <p>You have an upcoming telemedicine appointment with <strong>Dr. ${apt.doctor.user.name}</strong> at <strong>${time}</strong>.</p>
+                <p>You have an upcoming telemedicine appointment with <strong>Dr. ${apt.doctor.name}</strong> at <strong>${time}</strong>.</p>
                 <p>Please login to your dashboard to join the call at the scheduled time.</p>
                </div>`
       };
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       // Send reminder to doctor
       const mailOptionsDoc = {
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: apt.doctor.user.email,
+        to: apt.doctor.email,
         subject: 'Upcoming Appointment - E-Health Kerala',
         text: `You have an upcoming telemedicine appointment with ${apt.patient.name} at ${time}.`,
         html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
