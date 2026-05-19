@@ -67,13 +67,24 @@ export default async function DoctorDashboard() {
             </div>
           ) : (
             <div className="space-y-4">
-              {appointments.map(apt => (
+              {appointments.map((apt: any) => (
                 <div key={apt.id} className="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-md transition-shadow relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="font-bold text-slate-900 text-lg">{apt.patient.name}</h3>
                       <p className="text-sm text-slate-500">{apt.patient.email}</p>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${apt.type === 'ONLINE' ? 'bg-violet-100 text-violet-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {apt.type === 'ONLINE' ? 'Telemedicine' : 'Normal OP'}
+                        </span>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${apt.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {apt.paymentStatus === 'PAID' ? 'Paid' : 'Unpaid (Counter)'}
+                        </span>
+                        <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Fee: ₹{apt.fee}
+                        </span>
+                      </div>
                     </div>
                     <div className="bg-slate-100 p-2 rounded-lg text-slate-600">
                       <Clock className="w-5 h-5" />
@@ -84,13 +95,18 @@ export default async function DoctorDashboard() {
                       {new Date(apt.datetime).toLocaleString()}
                     </p>
                   </div>
-                  {apt.roomCode ? (
-                    <Link href={`/call/${apt.roomCode}`} className="w-full flex justify-center items-center space-x-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                  {apt.type === 'ONLINE' && apt.roomCode ? (
+                    <Link href={`/call/${apt.roomCode}`} className="w-full flex justify-center items-center space-x-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm">
                       <Video className="w-4 h-4" />
                       <span>Start Video Call</span>
                     </Link>
+                  ) : apt.type === 'OFFLINE' ? (
+                    <div className="w-full bg-slate-50 border border-slate-205 rounded-lg p-2.5 text-center">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">OP Ticket Consultation</p>
+                      <p className="text-xs font-bold text-slate-700 mt-0.5">#{apt.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
                   ) : (
-                    <button className="w-full flex justify-center items-center space-x-2 bg-slate-100 text-slate-400 px-4 py-2.5 rounded-lg font-medium cursor-not-allowed">
+                    <button className="w-full flex justify-center items-center space-x-2 bg-slate-100 text-slate-400 px-4 py-2.5 rounded-lg font-medium cursor-not-allowed text-sm">
                       <Video className="w-4 h-4" />
                       <span>Call Link Pending</span>
                     </button>

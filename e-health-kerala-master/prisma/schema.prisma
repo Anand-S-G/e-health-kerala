@@ -48,13 +48,19 @@ model Doctor {
 }
 
 model Appointment {
-  id         String   @id @default(uuid())
-  patientId  String
-  doctorId   String
-  datetime   DateTime
-  status     String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
-  roomCode   String?  @unique // For WebRTC
+  id            String   @id @default(uuid())
+  patientId     String
+  doctorId      String
+  datetime      DateTime
+  status        String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  roomCode      String?  @unique // For WebRTC
   
+  // Consultation & Payment Details
+  type          String   @default("ONLINE")  // ONLINE, OFFLINE
+  paymentType   String   @default("ONLINE")  // ONLINE (Online Payment), OFFLINE (At Hospital Counter)
+  paymentStatus String   @default("PAID")    // PAID, PENDING
+  fee           Int      @default(500)
+
   patient    User     @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
   doctor     User     @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
   

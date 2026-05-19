@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const session = await getSession();
   if (!session || session.user.role !== 'PATIENT') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { doctorId, datetime, roomCode, slotId } = await request.json();
+  const { doctorId, datetime, roomCode, slotId, type, paymentType, paymentStatus, fee } = await request.json();
 
   try {
     const appointment = await prisma.$transaction(async (tx) => {
@@ -17,14 +17,16 @@ export async function POST(request: Request) {
           patientId: session.user.id,
           doctorId,
           datetime: new Date(datetime),
-          roomCode,
+          roomCode: type === 'ONLINE' ? roomCode : null,
           status: 'SCHEDULED',
+          type: type || 'ONLINE',
+          paymentType: paymentType || 'ONLINE',
+          paymentStatus: paymentStatus || 'PAID',
+          fee: fee ? Number(fee) : 500,
         }
       });
 
       if (slotId) {
-        // FIXED: Using bracket notation ensures TypeScript won't block the compilation 
-        // regardless of strict camelCase schema generation settings on Vercel.
         await (tx as any).availabilitySlot.update({
           where: { id: slotId },
           data: { isBooked: true }
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
       return apt;
     });
 
+    return NextResponse.json({ success: true, appointment });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Booking failed' }, { status: 500 });

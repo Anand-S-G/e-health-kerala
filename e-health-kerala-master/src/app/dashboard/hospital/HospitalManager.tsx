@@ -20,7 +20,7 @@ type AvailabilitySlot = {
 type HospitalManagerProps = {
   hospitalId: string;
   initialDoctors: Doctor[];
-  initialAppointments: { patientId: string }[];
+  initialAppointments: { patientId: string; fee: number }[];
   initialSlots: AvailabilitySlot[];
 };
 
@@ -60,7 +60,7 @@ export default function HospitalManager({
   const totalDoctors = doctors.length;
   const totalAppointments = appointments.length;
   const uniquePatientsCount = new Set(appointments.map(a => a.patientId)).size;
-  const revenueGenerated = totalAppointments * 500; // Rs 500 per appt
+  const revenueGenerated = appointments.reduce((sum, a: any) => sum + (a.fee || 500), 0);
 
   const handleOnboard = async (e: React.FormEvent) => {
     e.preventDefault();

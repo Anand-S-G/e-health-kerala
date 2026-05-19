@@ -19,7 +19,7 @@ export default async function HospitalDashboard() {
   // Fetch appointments for doctors at this hospital
   const appointments = await prisma.appointment.findMany({
     where: { doctorId: { in: doctorUserIds } },
-    select: { patientId: true }
+    select: { patientId: true, fee: true }
   });
 
   // FIXED: Added type-casting to 'any' to bypass strict schema checks for the availabilitySlot lookup
