@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import AuthForm from './AuthForm';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AuthPage() {
   const hospitals = await prisma.hospital.findMany({
     select: { id: true, name: true, code: true },

@@ -12,6 +12,7 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@prisma/client": "^5.22.0",
+    "@react-google-maps/api": "^2.20.8",
     "date-fns": "^4.2.1",
     "jose": "^6.2.3",
     "lucide-react": "^1.16.0",

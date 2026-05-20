@@ -4,6 +4,7 @@ import { Calendar, Video, Clock, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import HospitalList from './HospitalList';
+import NearbyHospitalsMap from '@/components/NearbyHospitalsMap';
 
 export default async function PatientDashboard() {
   const session = await getSession();
@@ -47,6 +48,9 @@ export default async function PatientDashboard() {
         <h1 className="text-3xl font-bold mb-2">Welcome back, {session.user.name}</h1>
         <p className="text-blue-100">Here's your health overview for today.</p>
       </div>
+
+      {/* Nearby Hospitals Map */}
+      <NearbyHospitalsMap />
 
       {/* Quick Actions & Upcoming Appointments */}
       <div className="grid md:grid-cols-3 gap-8">
