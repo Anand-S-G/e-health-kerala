@@ -11,8 +11,19 @@ export async function GET(request: Request) {
   }
 
   const query = `hospitals in ${location}`;
-  const apiKey = 'AIzaSyDYF1Z6Ehgxy88Aj9wRQLX_Ywly4UavdTc'; // API Key provided by user
-  
+
+  // FIXED: Removed the hardcoded plaintext credential key string
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+  // Runtime configuration validation
+  if (!apiKey) {
+    console.error('Missing configuration entry: GOOGLE_PLACES_API_KEY is not defined.');
+    return NextResponse.json(
+      { error: 'Server configuration error: Places integration token missing.' },
+      { status: 500 }
+    );
+  }
+
   try {
     const res = await fetch(
       `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`
