@@ -13,9 +13,13 @@ export default function VideoCallPage({ params }: { params: Promise<{ roomCode: 
   const [connected, setConnected] = useState(false);
   const router = useRouter();
 
+  // Create a persistent unique ID for this specific browser session
+  const [userId] = useState(() => Math.random().toString(36).substring(7));
+
   useEffect(() => {
     let localStream: MediaStream;
     let pollInterval: NodeJS.Timeout;
+    let processedSignalIds = new Set<string>(); // Prevent processing the same signal twice
 
     const initCall = async () => {
       try {
@@ -30,7 +34,7 @@ export default function VideoCallPage({ params }: { params: Promise<{ roomCode: 
         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
         pc.ontrack = (event) => {
-          if (remoteVideoRef.current) {
+          if (remoteVideoRef.current && event.streams[0]) {
             remoteVideoRef.current.srcObject = event.streams[0];
             setConnected(true);
           }
@@ -41,25 +45,38 @@ export default function VideoCallPage({ params }: { params: Promise<{ roomCode: 
             await fetch('/api/webrtc', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ roomCode, type: 'candidate', payload: event.candidate }),
+              body: JSON.stringify({ roomCode, type: 'candidate', senderId: userId, payload: JSON.stringify(event.candidate) }),
             });
           }
         };
 
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await fetch('/api/webrtc', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roomCode, type: 'offer', payload: offer }),
-        });
-
+        // Long-polling signaling loop
         pollInterval = setInterval(async () => {
           const res = await fetch(`/api/webrtc?roomCode=${roomCode}`);
           if (res.ok) {
             const data = await res.json();
-            for (const signal of data.signals) {
+
+            // 1. If no one has sent an offer yet, I will become the caller and make one!
+            const hasOffer = data.signals?.some((s: any) => s.type === 'offer');
+            if (!hasOffer && pc.signalingState === 'stable') {
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              await fetch('/api/webrtc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomCode, type: 'offer', senderId: userId, payload: JSON.stringify(offer) }),
+              });
+              return;
+            }
+
+            // 2. Process incoming signals from the other user
+            for (const signal of data.signals || []) {
+              // Ignore our own signals
+              if (signal.senderId === userId || processedSignalIds.has(signal.id)) continue;
+
               const payload = JSON.parse(signal.payload);
+              processedSignalIds.add(signal.id);
+
               if (signal.type === 'offer') {
                 if (pc.signalingState !== 'stable') continue;
                 await pc.setRemoteDescription(new RTCSessionDescription(payload));
@@ -68,20 +85,22 @@ export default function VideoCallPage({ params }: { params: Promise<{ roomCode: 
                 await fetch('/api/webrtc', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ roomCode, type: 'answer', payload: answer }),
+                  body: JSON.stringify({ roomCode, type: 'answer', senderId: userId, payload: JSON.stringify(answer) }),
                 });
               } else if (signal.type === 'answer') {
                 if (pc.signalingState === 'have-local-offer') {
-                   await pc.setRemoteDescription(new RTCSessionDescription(payload));
+                  await pc.setRemoteDescription(new RTCSessionDescription(payload));
                 }
               } else if (signal.type === 'candidate') {
-                if (pc.remoteDescription) {
+                try {
                   await pc.addIceCandidate(new RTCIceCandidate(payload));
+                } catch (e) {
+                  console.error("Error adding ICE candidate", e);
                 }
               }
             }
           }
-        }, 3000); 
+        }, 2000); // Polling faster (2s) improves connection setup time
 
       } catch (err) {
         console.error("Error accessing media devices.", err);
@@ -99,7 +118,7 @@ export default function VideoCallPage({ params }: { params: Promise<{ roomCode: 
         peerConnection.current.close();
       }
     };
-  }, [roomCode]);
+  }, [roomCode, userId]);
 
   const toggleMic = () => {
     if (localVideoRef.current && localVideoRef.current.srcObject) {
@@ -126,31 +145,31 @@ export default function VideoCallPage({ params }: { params: Promise<{ roomCode: 
       <div className="absolute top-6 left-6 text-white font-bold text-xl drop-shadow-md">
         E-Health Consultation
       </div>
-      
+
       {!connected && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white bg-slate-800/80 px-6 py-3 rounded-full backdrop-blur-sm z-10 shadow-lg">
           <div className="flex items-center space-x-3">
-             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-             <span>Waiting for the other person to join...</span>
+            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span>Waiting for the other person to join...</span>
           </div>
         </div>
       )}
 
       {/* Remote Video (Main) */}
-      <video 
-        ref={remoteVideoRef} 
-        autoPlay 
-        playsInline 
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
         className="w-full h-full object-cover bg-black"
       />
 
       {/* Local Video (PiP) */}
       <div className="absolute bottom-28 right-6 w-48 aspect-video bg-slate-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20">
-        <video 
-          ref={localVideoRef} 
-          autoPlay 
-          playsInline 
-          muted 
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          muted
           className="w-full h-full object-cover transform scale-x-[-1]"
         />
       </div>
